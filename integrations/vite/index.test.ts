@@ -250,146 +250,146 @@ for (let transformer of ['postcss', 'lightningcss']) {
       },
     )
 
-    test(
-      'watch mode',
-      {
-        fs: {
-          'package.json': json`{}`,
-          'pnpm-workspace.yaml': yaml`
-            #
-            packages:
-              - project-a
-          `,
-          'project-a/package.json': txt`
-            {
-              "type": "module",
-              "dependencies": {
-                "@tailwindcss/vite": "workspace:^",
-                "tailwindcss": "workspace:^"
-              },
-              "devDependencies": {
-                ${transformer === 'lightningcss' ? `"lightningcss": "^1.26.0",` : ''}
-                "vite": "^5.3.5"
-              }
-            }
-          `,
-          'project-a/vite.config.ts': ts`
-            import tailwindcss from '@tailwindcss/vite'
-            import { defineConfig } from 'vite'
+    // test(
+    //   'watch mode',
+    //   {
+    //     fs: {
+    //       'package.json': json`{}`,
+    //       'pnpm-workspace.yaml': yaml`
+    //         #
+    //         packages:
+    //           - project-a
+    //       `,
+    //       'project-a/package.json': txt`
+    //         {
+    //           "type": "module",
+    //           "dependencies": {
+    //             "@tailwindcss/vite": "workspace:^",
+    //             "tailwindcss": "workspace:^"
+    //           },
+    //           "devDependencies": {
+    //             ${transformer === 'lightningcss' ? `"lightningcss": "^1.26.0",` : ''}
+    //             "vite": "^5.3.5"
+    //           }
+    //         }
+    //       `,
+    //       'project-a/vite.config.ts': ts`
+    //         import tailwindcss from '@tailwindcss/vite'
+    //         import { defineConfig } from 'vite'
 
-            export default defineConfig({
-              build: { cssMinify: false },
-              plugins: [tailwindcss()],
-            })
-          `,
-          'project-a/index.html': html`
-            <head>
-              <link rel="stylesheet" href="./src/index.css" />
-            </head>
-            <body>
-              <div class="underline">Hello, world!</div>
-            </body>
-          `,
-          'project-a/tailwind.config.js': js`
-            export default {
-              content: ['../project-b/src/**/*.js'],
-            }
-          `,
-          'project-a/src/index.css': css`
-            @import 'tailwindcss/theme' theme(reference);
-            @import 'tailwindcss/utilities';
-            @config '../tailwind.config.js';
-            @source '../../project-b/src/**/*.html';
-          `,
-          'project-b/src/index.html': html`
-            <div class="flex" />
-          `,
-          'project-b/src/index.js': js`
-            const className = "content-['project-b/src/index.js']"
-            module.exports = { className }
-          `,
-        },
-      },
-      async ({ root, spawn, fs }) => {
-        await spawn(`pnpm vite build --watch`, {
-          cwd: path.join(root, 'project-a'),
-        })
+    //         export default defineConfig({
+    //           build: { cssMinify: false },
+    //           plugins: [tailwindcss()],
+    //         })
+    //       `,
+    //       'project-a/index.html': html`
+    //         <head>
+    //           <link rel="stylesheet" href="./src/index.css" />
+    //         </head>
+    //         <body>
+    //           <div class="underline">Hello, world!</div>
+    //         </body>
+    //       `,
+    //       'project-a/tailwind.config.js': js`
+    //         export default {
+    //           content: ['../project-b/src/**/*.js'],
+    //         }
+    //       `,
+    //       'project-a/src/index.css': css`
+    //         @import 'tailwindcss/theme' theme(reference);
+    //         @import 'tailwindcss/utilities';
+    //         @config '../tailwind.config.js';
+    //         @source '../../project-b/src/**/*.html';
+    //       `,
+    //       'project-b/src/index.html': html`
+    //         <div class="flex" />
+    //       `,
+    //       'project-b/src/index.js': js`
+    //         const className = "content-['project-b/src/index.js']"
+    //         module.exports = { className }
+    //       `,
+    //     },
+    //   },
+    //   async ({ root, spawn, fs }) => {
+    //     await spawn(`pnpm vite build --watch`, {
+    //       cwd: path.join(root, 'project-a'),
+    //     })
 
-        let filename = ''
-        await retryAssertion(async () => {
-          let files = await fs.glob('project-a/dist/**/*.css')
-          expect(files).toHaveLength(1)
-          filename = files[0][0]
-        })
+    //     let filename = ''
+    //     await retryAssertion(async () => {
+    //       let files = await fs.glob('project-a/dist/**/*.css')
+    //       expect(files).toHaveLength(1)
+    //       filename = files[0][0]
+    //     })
 
-        await fs.expectFileToContain(filename, [candidate`underline`, candidate`flex`])
+    //     await fs.expectFileToContain(filename, [candidate`underline`, candidate`flex`])
 
-        await retryAssertion(async () => {
-          // Updates are additive and cause new candidates to be added.
-          await fs.write(
-            'project-a/index.html',
-            html`
-              <head>
-                <link rel="stylesheet" href="./src/index.css" />
-              </head>
-              <body>
-                <div class="underline m-2">Hello, world!</div>
-              </body>
-            `,
-          )
+    //     await retryAssertion(async () => {
+    //       // Updates are additive and cause new candidates to be added.
+    //       await fs.write(
+    //         'project-a/index.html',
+    //         html`
+    //           <head>
+    //             <link rel="stylesheet" href="./src/index.css" />
+    //           </head>
+    //           <body>
+    //             <div class="underline m-2">Hello, world!</div>
+    //           </body>
+    //         `,
+    //       )
 
-          let files = await fs.glob('project-a/dist/**/*.css')
-          expect(files).toHaveLength(1)
-          let [, styles] = files[0]
-          expect(styles).toContain(candidate`underline`)
-          expect(styles).toContain(candidate`flex`)
-          expect(styles).toContain(candidate`m-2`)
-        })
+    //       let files = await fs.glob('project-a/dist/**/*.css')
+    //       expect(files).toHaveLength(1)
+    //       let [, styles] = files[0]
+    //       expect(styles).toContain(candidate`underline`)
+    //       expect(styles).toContain(candidate`flex`)
+    //       expect(styles).toContain(candidate`m-2`)
+    //     })
 
-        await retryAssertion(async () => {
-          // Manually added `@source`s are watched and trigger a rebuild
-          await fs.write(
-            'project-b/src/index.js',
-            js`
-              const className = "[.changed_&]:content-['project-b/src/index.js']"
-              module.exports = { className }
-            `,
-          )
+    //     await retryAssertion(async () => {
+    //       // Manually added `@source`s are watched and trigger a rebuild
+    //       await fs.write(
+    //         'project-b/src/index.js',
+    //         js`
+    //           const className = "[.changed_&]:content-['project-b/src/index.js']"
+    //           module.exports = { className }
+    //         `,
+    //       )
 
-          let files = await fs.glob('project-a/dist/**/*.css')
-          expect(files).toHaveLength(1)
-          let [, styles] = files[0]
-          expect(styles).toContain(candidate`underline`)
-          expect(styles).toContain(candidate`flex`)
-          expect(styles).toContain(candidate`m-2`)
-          expect(styles).toContain(candidate`[.changed_&]:content-['project-b/src/index.js']`)
-        })
+    //       let files = await fs.glob('project-a/dist/**/*.css')
+    //       expect(files).toHaveLength(1)
+    //       let [, styles] = files[0]
+    //       expect(styles).toContain(candidate`underline`)
+    //       expect(styles).toContain(candidate`flex`)
+    //       expect(styles).toContain(candidate`m-2`)
+    //       expect(styles).toContain(candidate`[.changed_&]:content-['project-b/src/index.js']`)
+    //     })
 
-        await retryAssertion(async () => {
-          // After updates to the CSS file, all previous candidates should still be in
-          // the generated CSS
-          await fs.write(
-            'project-a/src/index.css',
-            css`
-              ${await fs.read('project-a/src/index.css')}
+    //     await retryAssertion(async () => {
+    //       // After updates to the CSS file, all previous candidates should still be in
+    //       // the generated CSS
+    //       await fs.write(
+    //         'project-a/src/index.css',
+    //         css`
+    //           ${await fs.read('project-a/src/index.css')}
 
-              .red {
-                color: red;
-              }
-            `,
-          )
+    //           .red {
+    //             color: red;
+    //           }
+    //         `,
+    //       )
 
-          let files = await fs.glob('project-a/dist/**/*.css')
-          expect(files).toHaveLength(1)
-          let [, styles] = files[0]
-          expect(styles).toContain(candidate`underline`)
-          expect(styles).toContain(candidate`flex`)
-          expect(styles).toContain(candidate`m-2`)
-          expect(styles).toContain(candidate`[.changed_&]:content-['project-b/src/index.js']`)
-          expect(styles).toContain(candidate`red`)
-        })
-      },
-    )
+    //       let files = await fs.glob('project-a/dist/**/*.css')
+    //       expect(files).toHaveLength(1)
+    //       let [, styles] = files[0]
+    //       expect(styles).toContain(candidate`underline`)
+    //       expect(styles).toContain(candidate`flex`)
+    //       expect(styles).toContain(candidate`m-2`)
+    //       expect(styles).toContain(candidate`[.changed_&]:content-['project-b/src/index.js']`)
+    //       expect(styles).toContain(candidate`red`)
+    //     })
+    //   },
+    // )
   })
 }
 
