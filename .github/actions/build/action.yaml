@@ -51,7 +51,9 @@ runs:
         key: ${{ inputs.os }}-oxide-${{ hashFiles('./crates/**/*') }}
 
     - name: Install dependencies
+      shell: bash
       run: pnpm install
 
     - name: Build
+      shell: bash
       run: pnpm run build
