@@ -9,6 +9,28 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20]
+        # Only lint on linux to avoid \r\n line ending errors
+        runner: [ubuntu-latest]
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        uses: ./.github/actions/build
+        with:
+          os: ${{ runner.os }}
+          node-version: ${{ matrix.node-version }}
+
+      - name: Lint
+        run: pnpm run lint
+        if: matrix.runner == 'ubuntu-latest'
+
   tests:
     strategy:
       fail-fast: false
@@ -28,16 +50,49 @@ jobs:
           os: ${{ runner.os }}
           node-version: ${{ matrix.node-version }}
 
-      - name: Lint
-        run: pnpm run lint
-        # Only lint on linux to avoid \r\n line ending errors
-        if: matrix.runner == 'ubuntu-latest'
-
       - name: Test
         run: pnpm run test
 
+  integration-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20]
+        runner: [ubuntu-latest, windows-latest, macos-14]
+
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        uses: ./.github/actions/build
+        with:
+          os: ${{ runner.os }}
+          node-version: ${{ matrix.node-version }}
+
       - name: Integration Tests
         run: pnpm run test:integrations
+
+  ui-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20]
+        runner: [ubuntu-latest, windows-latest, macos-14]
+
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        uses: ./.github/actions/build
+        with:
+          os: ${{ runner.os }}
+          node-version: ${{ matrix.node-version }}
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
